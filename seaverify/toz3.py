@@ -65,6 +65,9 @@ def create_z3_expr(function):
 
 def stmt_to_z3(node, current_condition=z3.BoolVal(True)):
     # print("stmt_to_z3", node, type(node))
+    # rename expr_to_z3 so that it takes a single argument, but the 2nd one is current_condition
+    # The live below 
+    aux_expr_to_z3 = lambda node: expr_to_z3(node, current_condition)
     if type(node) == list:
         if len(node) == 0:
             return None
@@ -72,17 +75,17 @@ def stmt_to_z3(node, current_condition=z3.BoolVal(True)):
             stmt_to_z3(node[i], current_condition)
         return stmt_to_z3(node[-1], current_condition)
     if isinstance(node, ast.If):
-        condition = expr_to_z3(node.test)
+        condition = aux_expr_to_z3(node.test)
         body = stmt_to_z3(node.body, z3.And(current_condition, condition))
         orelse = stmt_to_z3(node.orelse, z3.And(current_condition, z3.Not(condition)))
         return None #z3.If(z3.And(current_condition, condition), body, orelse)
     elif isinstance(node, ast.Return):
-        return expr_to_z3(node.value)
+        return aux_expr_to_z3(node.value)
     elif isinstance(node, ast.AugAssign):
         target = node.target
         assert isinstance(target, ast.Name) or isinstance(target, ast.Attribute), "Only single variable assigment is supported for now"
         target_name = target.id if isinstance(target, ast.Name) else target.attr
-        value = expr_to_z3(node.value)
+        value = aux_expr_to_z3(node.value)
         aug_value = operator_to_z3(node.op, [get_z3_object(target), value])
         get_z3_object(target, current_condition, target_name, aug_value)
         return None
@@ -91,65 +94,74 @@ def stmt_to_z3(node, current_condition=z3.BoolVal(True)):
         target = node.targets[0]
         assert isinstance(target, ast.Name) or isinstance(target, ast.Attribute), "Only single variable assigment is supported for now"
         target_name = target.id if isinstance(target, ast.Name) else target.attr
-        get_z3_object(target, current_condition, target_name, expr_to_z3(node.value))
+        get_z3_object(target, current_condition, target_name, aux_expr_to_z3(node.value))
         return None
     elif isinstance(node, ast.Expr):
-        return expr_to_z3(node.value)
+        return aux_expr_to_z3(node.value)
     elif isinstance(node, ast.Assert):
-        solver.add(z3.Implies(current_condition, expr_to_z3(node.test)))
+        solver.add(z3.Implies(current_condition, aux_expr_to_z3(node.test)))
     else:
         raise Exception("Todo in stmt_to_z3 -> node type: " + str(type(node)))
 
-def expr_to_z3(node):
+def expr_to_z3(node, current_condition=z3.BoolVal(True)):
     #print("expr_to_z3", node, type(node))
+    aux_expr_to_z3 = lambda node: expr_to_z3(node, current_condition)
     if isinstance(node, ast.Constant):
         return constant_to_z3(type(node.value), node.value)
     elif isinstance(node, ast.Compare):
         assert len(node.ops) == 1
         assert len(node.comparators) == 1
-        left = expr_to_z3(node.left)
-        right = expr_to_z3(node.comparators[0])
+        left = aux_expr_to_z3(node.left)
+        right = aux_expr_to_z3(node.comparators[0])
         return operator_to_z3(node.ops[0], [left, right])
     elif isinstance(node, ast.BoolOp):
-        values = [expr_to_z3(n) for n in node.values]
+        values = [aux_expr_to_z3(n) for n in node.values]
         return operator_to_z3(node.op, values)
     elif isinstance(node, ast.BinOp):
-        left, right = expr_to_z3(node.left), expr_to_z3(node.right)
+        left, right = aux_expr_to_z3(node.left), aux_expr_to_z3(node.right)
         return operator_to_z3(node.op, [left, right])
     elif isinstance(node, ast.UnaryOp):
-        return operator_to_z3(node.op, [expr_to_z3(node.operand)])
+        return operator_to_z3(node.op, [aux_expr_to_z3(node.operand)])
     elif isinstance(node, ast.Name):
         return all_vars[node.id]
     elif isinstance(node, ast.Attribute):
         return get_z3_object(node)
     elif isinstance(node, ast.Lambda):
-        return expr_to_z3(node.body)
+        return aux_expr_to_z3(node.body)
     elif isinstance(node, ast.List):
-        return [expr_to_z3(n) for n in node.elts]
+        return [aux_expr_to_z3(n) for n in node.elts]
     elif isinstance(node, ast.Subscript):
         assert isinstance(node.slice, ast.Constant)
-        value = expr_to_z3(node.value)
+        value = aux_expr_to_z3(node.value)
         index = node.slice.value
         return value[index]
     elif isinstance(node, ast.Call):
         if isinstance(node.func, ast.Name):
             if node.func.id == "print":
-                print("LOG:", [expr_to_z3(n) for n in node.args])
+                print("LOG:", [aux_expr_to_z3(n) for n in node.args])
                 return None
             if node.func.id == "min" or node.func.id == "max":
                 assert len(node.args) == 2
-                left = expr_to_z3(node.args[0])
-                right = expr_to_z3(node.args[1])
+                left = aux_expr_to_z3(node.args[0])
+                right = aux_expr_to_z3(node.args[1])
                 if node.func.id == "min":
                     return z3.If(left < right, left, right)
                 else:
                     return z3.If(left > right, left, right)
+            if node.func.id == "seaverify_assert_eq":
+                assert len(node.args) >= 2
+                assert len(node.keywords) == 0
+                left = aux_expr_to_z3(node.args[0])
+                right = aux_expr_to_z3(node.args[1])
+                # The solver is ask to find "input" such that it's violated, hence the negation
+                solver.add(z3.Implies(current_condition, left != right))
+                return None
             if node.func.id == "z3_map_assign":
                 assert len(node.args) == 3
                 assert len(node.keywords) == 0
                 f = get_z3_object(node.args[0])
-                index = expr_to_z3(node.args[1])
-                value = expr_to_z3(node.args[2])
+                index = aux_expr_to_z3(node.args[1])
+                value = aux_expr_to_z3(node.args[2])
                 name = f.name() if f is not None else "map"
                 new_f = hardcoded_objects[HardcodedMapping](global_counter.create(name))
                 idx = z3.Const(global_counter.create("idx_"+name), index.sort())
@@ -160,7 +172,7 @@ def expr_to_z3(node):
                 assert len(node.args) == 2
                 assert len(node.keywords) == 0
                 f = get_z3_object(node.args[0])
-                index = expr_to_z3(node.args[1])
+                index = aux_expr_to_z3(node.args[1])
                 answer = z3.Const(global_counter.create(f.name()+"["+str(index)+"]"), f.range())
                 solver.add(answer == f(index))
                 return answer
@@ -169,7 +181,7 @@ def expr_to_z3(node):
             # This is an object calling one of its method with kwargs
             obj = get_z3_object(node.func.value)
             method_name = node.func.attr
-            kwargs = {kw.arg: expr_to_z3(kw.value) for kw in node.keywords}
+            kwargs = {kw.arg: aux_expr_to_z3(kw.value) for kw in node.keywords}
             # at the end of the call we want to execute getattr(obj, method_name)(obj, **kwargs)
             # add self, kwargs to all_vars
             old_vars = {}
@@ -184,7 +196,7 @@ def expr_to_z3(node):
             f = "\n".join(f.split("\n")[1:])
             f = textwrap.dedent(f)
             function = ast.parse(f)
-            answer = stmt_to_z3(function.body)
+            answer = stmt_to_z3(function.body, current_condition)
             all_vars.clear()
             for k, v in old_vars.items():
                 all_vars[k] = v

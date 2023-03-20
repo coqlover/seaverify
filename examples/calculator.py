@@ -49,6 +49,18 @@ def modify_owner(owner: Signer, calculator: Calculator, new_owner: Pubkey):
   assert owner.key() == calculator.owner, 'This is not your calculator!'
   calculator.owner = new_owner
 
+@test
+def test_assigment(calculator: Calculator):
+  assert calculator.display == 0
+  calculator.display = 1
+  seaverify_assert_eq(calculator.display, 1, 'The calculator should be 1')
+
+@test
+def test_reset(calculator: Calculator):
+  #reset_calculator(calculator)
+  assert calculator.display == 0
+  seaverify_assert_eq(calculator.display, 0, 'The calculator should be 1')
+
 if __name__ == '__main__':
   # The above invariant will fail due to modify_owner. Try to uncomment it!
   # add_invariant(lambda _: _.calculator.owner == _.owner.key())
@@ -59,3 +71,4 @@ if __name__ == '__main__':
   # Will fail too
   # add_invariant(lambda _: _.calculator.display >= 1)
   verify_contract()
+  verify_tests()

@@ -11,6 +11,8 @@ import z3
 # ================
 
 def print_z3_var(var, model, s="+"):
+  if var is None:
+    return
   # if var is a z3 ast, print it
   if isinstance(var, z3.AstRef):
     value = model[var]
@@ -27,15 +29,16 @@ def print_z3_var(var, model, s="+"):
         pass
     #print("No relevant value (?) for ", var)
 
-def print_solution(func):
-  # Print the value of calculator.display
-  print("---------------------------------")
-  print("Constraints:")
-  print(solver.assertions())
-  print("---------------------------------")
+def print_solution(func, simplified=False):
+  if not simplified:
+    print("---------------------------------")
+    print("Constraints:")
+    print(solver.assertions())
+    print("---------------------------------")
   model = solver.model()
-  print("All variables:")
-  print(model)
+  if not simplified:
+    print("All variables:")
+    print(model)
   print("---------------------------------")
   print("Start state:")
   for x in begin_vars:
@@ -100,6 +103,15 @@ def invariant(lam):
     add_enforce(func, lam)
     return func
   return decorator
+
+list_test = []
+
+def test(lam):
+  list_test.append(lam)
+  def decorator(func):
+    return func
+  return decorator
+
 
 # ================
 # Class decorators
@@ -225,3 +237,38 @@ def verify_contract():
   for i in range(len(all_invariants)):
     verify_invariant(all_invariants[i], all_invariants[:i])
   print("Done verifying the contract")
+
+
+# On veut mq que tous les chemins vérifient tous les tests posés sur le chemins
+# Si il existe input tq au moins un est violé alors c'est good
+
+
+def single_verify_test(f):
+  #print("Verifying test:", inspect.getsource(f), end="")
+  reset_solver()
+  # First, transform the argument of the function into z3 variables
+  args = create_symbolic_arguments(f)
+  add_args_to_solver(f, args)
+  # Now we execute the function
+  transform_f_to_z3(f)
+  res = solver.check()
+  if res == z3.sat:
+    print("❌❌❌❌❌❌")
+    print(f.__name__, "is not correct")
+    print_solution(f, True)
+    print("❌❌❌❌❌❌")
+    return False
+  return True
+
+def verify_tests():
+  print("Verification of tests")
+  results = []
+  for test in list_test:
+    results.append(single_verify_test(test))
+  print("--------------------")
+  print("Results of tests:")
+  for i in range(len(results)):
+    test = list_test[i]
+    answer = results[i]
+    s = "✅" if answer else "❌"
+    print(s, test.__name__)
