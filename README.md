@@ -87,6 +87,8 @@ Verification of add_liquidity failed; Here are your properties:
 
 ## Usage
 
+To try it, you probably need Z3, and then clone this repo and execute any file of the folder example: `python3 examples/calculator.py`
+
 To add seaverify to your project, here are the steps:
 
 + Clone this repository in your project: `git clone https://github.com/coqlover/seaverify`
