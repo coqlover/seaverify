@@ -10,7 +10,7 @@ class Calculator(Account):
   owner: Pubkey
   display: i64
 
-@instruction
+#@instruction
 @enforce(lambda before, after: after.calculator.owner == before.owner.key())
 def init_calculator(owner: Signer, calculator: Empty[Calculator]):
   calculator = calculator.init(payer = owner, seeds = ['Calculator', owner])
