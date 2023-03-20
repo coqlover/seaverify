@@ -1,6 +1,6 @@
 # Seaverify
 
-Seaverify is a tool for verifying properties of SeaHorse programs. It requires the user to specify some properties, and it automaticly verify with Z3.
+Seaverify is a tool for verifying properties of SeaHorse programs. It requires the user to specify some properties, and it automatically verifies them with Z3.
 
 It is a work in progress, and doesn't model correctly the semantic of Solana, so please don't use it in production.
 
@@ -14,7 +14,7 @@ def increment(n: u64):
     n += 1
 ```
 
-You can annotate it with some properties. For instance that n increases.
+You can annotate it with some properties. For instance, that n increases.
 
 ```python
 @instruction
@@ -23,9 +23,67 @@ def increment(n: u64):
     n += 1
 ```
 
-Then, seaverify will verify this property for every possible value of n. It cannot miss a testcase (assuming my library doens't have a bug) like a fuzzer can.
+Then, seaverify will verify this property for every possible value of n. It cannot miss a testcase (assuming my library doesn't have a bug) like a fuzzer can.
 
 Run the program `hello world.py` to see the result!
+
+---
+
+Even if you stack a lot of properties, seaverify will verify them very quickly.  
+[For instance, for `add_liquidity` of the file `see_amm.py`](https://github.com/coqlover/seaverify/blob/main/examples/see_amm.py#L110:L132)  
+These are simple properties, but I guess useful ones, and it takes 1sec to verify them all.
+```python
+@instruction
+# Money is conserved
+@enforce(lambda before, after: before.pool_token_vault_a.amount() + before.token_amount_a == after.pool_token_vault_a.amount())
+@enforce(lambda before, after: before.pool_token_vault_b.amount() + before.token_amount_b == after.pool_token_vault_b.amount())
+# Pool token vault goes up only
+@enforce(lambda before, after: before.pool_token_vault_a.amount() <= after.pool_token_vault_a.amount())
+@enforce(lambda before, after: before.pool_token_vault_b.amount() <= after.pool_token_vault_b.amount())
+# User token account goes down only
+@enforce(lambda before, after: before.user_token_account_a.amount() >= after.user_token_account_a.amount())
+@enforce(lambda before, after: before.user_token_account_b.amount() >= after.user_token_account_b.amount())
+# Balances after are positive
+@enforce(lambda before, after: after.pool_token_vault_a.amount() >= 0)
+@enforce(lambda before, after: after.pool_token_vault_b.amount() >= 0)
+@enforce(lambda before, after: after.user_token_account_a.amount() >= 0)
+@enforce(lambda before, after: after.user_token_account_b.amount() >= 0)
+# User lp token account goes up only
+@enforce(lambda before, after: before.user_lp_token_account.amount() <= after.user_lp_token_account.amount())
+# LP token mint goes up only
+@enforce(lambda before, after: before.lp_token_mint.supply() <= after.lp_token_mint.supply())
+def add_liquidity(
+```
+
+When one/some properties are violated, seaverify will tell you which one and give you values of variable that violate this properties:  
+(Lot of variable are printed, emphasis here on this readme is mine, the real output is somewhat hard to navigate for now)
+
+```python
+Start state:
+...
++ Symbolic pool_token_vault_a :
++ + _amount?2 : 0
+...
+End state:
+...
++ Symbolic pool_token_vault_a :
++ + _amount?6 : 3
+...
+Verification of add_liquidity failed; Here are your properties:
+✅ lambda _: True
+✅ lambda before, after: before.pool_token_vault_a.amount() + before.token_amount_a == after.pool_token_vault_a.amount()
+✅ lambda before, after: before.pool_token_vault_b.amount() + before.token_amount_b == after.pool_token_vault_b.amount()
+✅ lambda before, after: before.pool_token_vault_a.amount() <= after.pool_token_vault_a.amount()
+✅ lambda before, after: before.pool_token_vault_b.amount() <= after.pool_token_vault_b.amount()
+✅ lambda before, after: before.user_token_account_a.amount() >= after.user_token_account_a.amount()
+✅ lambda before, after: before.user_token_account_b.amount() >= after.user_token_account_b.amount()
+❌ lambda before, after: after.pool_token_vault_a.amount() == 0
+✅ lambda before, after: after.pool_token_vault_b.amount() >= 0
+✅ lambda before, after: after.user_token_account_a.amount() >= 0
+✅ lambda before, after: after.user_token_account_b.amount() >= 0
+✅ lambda before, after: before.user_lp_token_account.amount() <= after.user_lp_token_account.amount()
+✅ lambda before, after: before.lp_token_mint.supply() <= after.lp_token_mint.supply()
+```
 
 ## Usage
 
@@ -45,7 +103,11 @@ To add seaverify to your project, here are the steps:
 
 ## Non-features
 
-I only support i64 and u64, and everything is considered a u64. Same for everything specific to solana, I need to dive deep into anchor and the sealevel to make sure the way my library model the behavior of solana objects is correct.
+I only support i64 and u64, and everything is considered a u64, so can't be negative.
+
+Same for everything specific to solana, I need to dive deep into anchor and the sealevel to make sure the way my library model the behavior of solana objects is correct.
+
+So there is absolutely no guarantee that seaverify model correctly the semantic of solana. Do not use it in production.
 
 ## How it works
 
