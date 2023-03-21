@@ -23,6 +23,17 @@ def increment(n: u64):
     n += 1
 ```
 
+Or write a test for it:
+
+```python
+@test
+def test_increment(n: u64):
+    old_n = n
+    increment(n = n)
+    increment(n = n)
+    seaverify_assert(n, old_n + 2)
+```
+
 Then, seaverify will verify this property for every possible value of n. It cannot miss a testcase (assuming my library doesn't have a bug) like a fuzzer can.
 
 Run the program `hello world.py` to see the result!
@@ -102,6 +113,7 @@ To add seaverify to your project, here are the steps:
 + Verification of properties on before/after values of arguments of the functions of your program: `@enforce(lambda before, after: after.n == before.n + 1)` -> here `before.n` is the value of n before the function is called, and `after.n` is the value of n after the function is called. Check the file `examples/calculator.py` for an example.
 + Assumptions of properties on before values of arguments of the functions of your program: `@assume(lambda before: before.n >= 0)` -> here `before.n` is the value of n before the function is called, and this property is assumed to be true. This is useful if you know it's true, but don't spend compute time to assert it. Check the file `examples/assume.py` for an example.
 + Verification of invariants on the state of your program: `@invariant(lambda state: state.n >= 0)` -> here `state.n` is the value of n at every function call. It verifies, for every instruction of your program, that if the invariant is true before a function call, it will be true after the function call. I think I misunderstood how programs works in Solana, so this may not be very useful. Check the file `examples/invariant.py` for an example.
++ Symbolic testing. Create test functions, and insert `seaverify_assert` to assert something. These test functions take any number of argument, and seaverify will guarantee that: for every possible value of every argument, each assertion is true. Check the file `examples/hello world.py` and `examples/calculator.py` for an example. 
 
 ## Non-features
 
@@ -111,13 +123,19 @@ Same for everything specific to solana, I need to dive deep into anchor and the 
 
 So there is absolutely no guarantee that seaverify model correctly the semantic of solana. Do not use it in production.
 
+Same for function calls. I'm not sure yet if I copy arguments, or pass reference to it. For now it's a reference if you give a variable, and a copy if you do a function call. I'm not sure what to do, it'll probably change in the future.
+
 ## How it works
 
-Code written in the decorators are compiled to Z3 expression, as well as the code of the function. Then, the Z3 solver is used to verify that the function satisfies the property.
+The code is compiled to Z3 expression.
 
-Unlike other verification tools, the analysis is done directly on the source code, and not on the compiled bytecode.
+Then we ask Z3 some questions, it depends on what we want to do.
 
-For instance, your code is:
+Also, unlike other verification tools, the analysis is done directly on the source code, and not on the compiled bytecode.
+
+### Assertion of properties
+
+For instance, if your code is:
 
 ```python
 @assume(A1)
@@ -135,3 +153,24 @@ A1(args) and A2(args) and B(args) and ((not C1(args)) or (not C2(args)))
 ```
 
 If it succeeds, it returns a counterexample that violate for instance C1, otherwise it returns `unsat` and the property is verified for all inputs!
+
+### Symbolic testing
+
+For instance, if your code is:
+
+```python
+@test
+def f(args)
+    A1
+    seaverify_assert_eq(B1)
+    A2
+    seaverify_assert_eq(B2)
+```
+
+Then Z3 is asked to find value of args such that:
+
+```python
+A1(args) and A2(args) and ((not B1(args)) or (not B2(args)))
+```
+
+If it succeeds, it returns a counterexample that violate the assertion, otherwise it returns `unsat` and your test is valid for all inputs!

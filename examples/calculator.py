@@ -49,17 +49,46 @@ def modify_owner(owner: Signer, calculator: Calculator, new_owner: Pubkey):
   assert owner.key() == calculator.owner, 'This is not your calculator!'
   calculator.owner = new_owner
 
-@test
-def test_assigment(calculator: Calculator):
-  assert calculator.display == 0
-  calculator.display = 1
-  seaverify_assert_eq(calculator.display, 1, 'The calculator should be 1')
+
+#######
+# Tests
+#######
 
 @test
-def test_reset(calculator: Calculator):
-  #reset_calculator(calculator)
+def test_assigment(calculator: Calculator, value: i64):
+  calculator.display = 1
+  calculator.display += value
+  seaverify_assert(calculator.display == 1+value)
+
+# Todo split multiple assert statements into multiple tests to make it easier to debug with a counterexample
+# Here for instance, if the middle assert fails, we don't have much info
+@test
+def test_assigment_2(calculator: Calculator, value: i64):
+  calculator.display = 0
+  seaverify_assert(calculator.display == 0)
+  calculator.display = 1
+  seaverify_assert(calculator.display == 1)
+  calculator.display = 2
+  seaverify_assert(calculator.display == 2)
+
+@test
+def test_reset(owner2: Signer, calculator: Calculator):
+  reset_calculator(owner=owner2, calculator=calculator)
   assert calculator.display == 0
-  seaverify_assert_eq(calculator.display, 0, 'The calculator should be 1')
+  seaverify_assert(calculator.display == 0)
+
+@test
+def test_modify_owner(owner: Signer, owner2: Signer, calculator: Calculator):
+  assert owner.key() == calculator.owner
+  seaverify_assert(calculator.owner == owner.key())
+  modify_owner(owner=owner, calculator=calculator, new_owner=owner2.key())
+  seaverify_assert(calculator.owner == owner2.key())
+
+@test
+def test_add_to_calculator(owner: Signer, calculator: Calculator, value: i64):
+  old_value = calculator.display
+  do_operation(owner=owner, calculator=calculator, op=0, num=value)
+  seaverify_assert(calculator.display == old_value + value)
 
 if __name__ == '__main__':
   # The above invariant will fail due to modify_owner. Try to uncomment it!

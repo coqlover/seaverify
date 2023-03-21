@@ -163,7 +163,7 @@ def create_symbolic_arguments(f):
   return args
 
 def transform_f_to_z3(f):
-  create_z3_expr(ast.parse(inspect.getsource(f)))
+  return create_z3_expr(ast.parse(inspect.getsource(f)))
 
 def verify_invariant(lam, invariants):
   print("Verifying invariant:", inspect.getsource(lam), end="")
@@ -238,10 +238,8 @@ def verify_contract():
     verify_invariant(all_invariants[i], all_invariants[:i])
   print("Done verifying the contract")
 
-
-# On veut mq que tous les chemins vérifient tous les tests posés sur le chemins
-# Si il existe input tq au moins un est violé alors c'est good
-
+global every_assert_statement
+every_assert_statement = []
 
 def single_verify_test(f):
   #print("Verifying test:", inspect.getsource(f), end="")
@@ -250,7 +248,10 @@ def single_verify_test(f):
   args = create_symbolic_arguments(f)
   add_args_to_solver(f, args)
   # Now we execute the function
+  import seaverify.decorators
+  seaverify.decorators.every_assert_statement = []
   transform_f_to_z3(f)
+  solver.add(z3.Or([z3.Not(x) for x in seaverify.decorators.every_assert_statement]))
   res = solver.check()
   if res == z3.sat:
     print("❌❌❌❌❌❌")

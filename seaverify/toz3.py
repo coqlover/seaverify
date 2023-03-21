@@ -148,13 +148,12 @@ def expr_to_z3(node, current_condition=z3.BoolVal(True)):
                     return z3.If(left < right, left, right)
                 else:
                     return z3.If(left > right, left, right)
-            if node.func.id == "seaverify_assert_eq":
-                assert len(node.args) >= 2
+            if node.func.id == "seaverify_assert":
+                assert len(node.args) == 1, "seaverify_assert takes only one argument"
                 assert len(node.keywords) == 0
-                left = aux_expr_to_z3(node.args[0])
-                right = aux_expr_to_z3(node.args[1])
-                # The solver is ask to find "input" such that it's violated, hence the negation
-                solver.add(z3.Implies(current_condition, left != right))
+                b = aux_expr_to_z3(node.args[0])
+                import seaverify.decorators
+                seaverify.decorators.every_assert_statement.append(z3.Implies(current_condition, b))
                 return None
             if node.func.id == "z3_map_assign":
                 assert len(node.args) == 3
@@ -176,7 +175,37 @@ def expr_to_z3(node, current_condition=z3.BoolVal(True)):
                 answer = z3.Const(global_counter.create(f.name()+"["+str(index)+"]"), f.range())
                 solver.add(answer == f(index))
                 return answer
-            assert False, "Simple function call are not supported yet except min/max with 2elems, print, and map operations"
+            # Otherwise, it's a function call
+            # Push every arguments in all_vars, execute the function, and clean all_vars
+            possible_candidates = [f for f in all_instructions if f.__name__ == node.func.id]
+            assert len(possible_candidates) > 0, "No function named "+node.func.id+" found"
+            assert len(possible_candidates) == 1, "Multiple functions named "+node.func.id+" found"
+            f = possible_candidates[0]
+            old_vars = {}
+            for k, v in all_vars.items():
+                old_vars[k] = v
+            assert len(node.args) == 0, "Only keyword arguments are supported"
+            new_all_vars = {}
+            for kw in node.keywords:
+                new_all_vars[kw.arg] = aux_expr_to_z3(kw.value)
+            all_vars.clear()
+            for k, v in new_all_vars.items():
+                all_vars[k] = v
+            # Execute the function
+            import seaverify
+            answer = seaverify.decorators.transform_f_to_z3(f)
+            # Clean all_vars
+            new_all_vars.clear()
+            for k, v in old_vars.items():
+                new_all_vars[k] = v
+            for kw in node.keywords:
+                if isinstance(kw.value, ast.Name):
+                    new_all_vars[kw.value.id] = all_vars[kw.arg]
+            all_vars.clear()
+            for k, v in new_all_vars.items():
+                all_vars[k] = v
+            return answer
+            #assert False, "Simple function call are not supported yet except: min/max with 2 arguments, print, and map operations"
         elif isinstance(node.func, ast.Attribute):
             # This is an object calling one of its method with kwargs
             obj = get_z3_object(node.func.value)
