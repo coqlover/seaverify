@@ -1,6 +1,6 @@
+from seaverify.global_vars import solver, all_instructions, all_vars, global_counter, every_assert_statement
 from seaverify.object import *
 from seaverify.toz3 import create_z3_expr, lambda_to_z3, add_args_to_solver, object_to_z3
-from seaverify.global_vars import solver, all_instructions, all_vars, global_counter
 from seaverify.print import print_solution
 import ast
 import inspect
@@ -47,7 +47,13 @@ def invariant(lam):
 list_test = []
 
 def test(lam):
-  list_test.append(lam)
+  list_test.append((lam, False)) # False means that the test is not expected to fail
+  def decorator(func):
+    return func
+  return decorator
+
+def fail_test(lam):
+  list_test.append((lam, True))
   def decorator(func):
     return func
   return decorator
@@ -174,16 +180,19 @@ def verify_contract():
     verify_invariant(all_invariants[i], all_invariants[:i])
   print("Done verifying the contract")
 
-def single_verify_test(f):
+def single_verify_test(f, is_fail_test=False):
   solver.reset()
   # First, transform the argument of the function into z3 variables
   args = create_symbolic_arguments(f)
   add_args_to_solver(f, args)
   # Now we execute the function
-  every_assert_statement = []
+  every_assert_statement.clear()
   transform_f_to_z3(f)
   solver.add(z3.Or([z3.Not(x) for x in every_assert_statement]))
   res = solver.check()
+  # Todo still print a solution when a fail test is correct
+  if is_fail_test:
+    return res == z3.unsat
   if res == z3.sat:
     print("❌❌❌❌❌❌")
     print(f.__name__, "is not correct")
@@ -196,11 +205,14 @@ def verify_tests():
   print("Verification of tests")
   results = []
   for test in list_test:
-    results.append(single_verify_test(test))
+    results.append(single_verify_test(test[0], test[1]))
   print("--------------------")
   print("Results of tests:")
+  list_results = []
   for i in range(len(results)):
-    test = list_test[i]
-    answer = results[i]
+    test = list_test[i][0]
+    answer = results[i] if not list_test[i][1] else not results[i]
+    list_results.append(answer)
     s = "✅" if answer else "❌"
     print(s, test.__name__)
+  return list_results

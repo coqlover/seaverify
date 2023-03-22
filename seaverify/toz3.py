@@ -2,8 +2,8 @@
 # Doc of ast python: https://docs.python.org/3/library/ast.html
 # (Copilot got the doc first try lmao)
 
-from seaverify.object import hardcoded_objects, make_int, HardcodedMapping
 from seaverify.global_vars import all_instructions, all_vars, begin_vars, global_counter, symbolic_objects, current_before_name, current_after_name, solver, every_assert_statement
+from seaverify.object import hardcoded_objects, make_int, HardcodedMapping
 from seaverify.operator import operator_to_z3
 import z3
 import ast

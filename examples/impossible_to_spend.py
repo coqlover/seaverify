@@ -25,6 +25,7 @@ def possible():
   1
 
 if __name__ == '__main__':
+  # This will fail, hence this try/except
   success = False
   try:
     verify_contract()

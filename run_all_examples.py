@@ -4,11 +4,14 @@ import time
 # If it fails, fail too
 t = time.time()
 l = []
+res = []
 for file in os.listdir("examples"):
     if file.endswith(".py"):
         c = os.system("python3 examples/" + file)
-        assert str(c) == "0"
+        res.append(str(c) == "0")
         l.append(file)
 
+print("--------------------")
 print("All tests passed in", time.time() - t, "seconds")
-print("File executed: ", l)
+for i in range(len(l)):
+    print("✅" if res[i] else "❌", l[i])

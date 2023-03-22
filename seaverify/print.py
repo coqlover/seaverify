@@ -1,7 +1,7 @@
 # Everything related to print/pretty-printing anything related to the solver
 
-import z3
 from seaverify.global_vars import solver, all_vars, begin_vars
+import z3
 
 def print_z3_var(var, model, s="+"):
   if var is None:

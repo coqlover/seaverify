@@ -1,11 +1,11 @@
 # Override some part of the seahorse prelude to add feature
 # Ideally, can't break anything
 
-from seahorse.prelude import *
 from seaverify.global_vars import symbolic_objects, all_instructions
+from seahorse.prelude import *
 from seaverify.object import HardcodedMapping
 # Function we don't use but expose the end user to (non exhaustive list)
-from seaverify.decorators import assume, invariant, test, enforce, add_invariant, verify_contract, verify_tests
+from seaverify.decorators import assume, invariant, test, fail_test, enforce, add_invariant, verify_contract, verify_tests
 
 # ==================
 # Hardcoded function
