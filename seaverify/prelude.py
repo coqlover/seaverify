@@ -1,17 +1,21 @@
+# Override some part of the seahorse prelude to add feature
+# Ideally, can't break anything
+
 from seahorse.prelude import *
+from seaverify.global_vars import symbolic_objects, all_instructions
+from seaverify.object import HardcodedMapping
+# Function we don't use but expose the end user to (non exhaustive list)
+from seaverify.decorators import assume, invariant, test, enforce, add_invariant, verify_contract, verify_tests
 
-import z3
+# ==================
+# Hardcoded function
+# ==================
 
-global solver
-solver = z3.Solver()
-def reset_solver():
-    global solver
-    solver.reset()
+def z3_map_lookup(map: HardcodedMapping, key: str):
+    """Return the value associated with key in map"""
 
-all_instructions = []
-symbolic_objects = {}
-
-from seaverify.decorators import *
+def z3_map_assign(map: HardcodedMapping, key: str, value: int):
+    """Return a new map with key associated with value"""
 
 # ==========
 # Rust types
@@ -31,7 +35,7 @@ class Pool:
     token_vault_a: str
     token_vault_b: str
     lp_token_mint: str
-    def init(payer=None, seeds=None):
+    def init(self, payer=None, seeds=None):
         return self
 
 class TokenOwner:
@@ -50,10 +54,10 @@ class TokenOwner:
 class TokenAccount(AccountWithKey):
     _amount: u64
     _key: str
-    _mint: str
+    #_mint: str
     # _owner: TokenOwner
     def transfer(self, authority=None, to=None, amount=None, signer=None):
-        assert self._mint == to._mint
+        #assert self._mint == to._mint
         self._amount -= amount
         to._amount += amount
         #self._owner.transfer(authority = self, to = to, amount = amount)
@@ -64,7 +68,7 @@ class TokenAccount(AccountWithKey):
     def init(self, payer=None, authority=None, mint=None, seeds=None):
         self._amount = 0
         #self._authority = authority
-        self._mint = mint
+        #self._mint = mint
         return self
 
 class TokenMap(AccountWithKey):

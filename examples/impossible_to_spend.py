@@ -1,5 +1,7 @@
 # When you assume too strong proprieties, it becomes impossible to satisfy them
-# Here is a demo
+# Here is a demo:
+#   The first test assumes too much, the solver will warn you.
+#   The second test just fails.
 
 import sys
 sys.path.append(".")
@@ -23,4 +25,10 @@ def possible():
   1
 
 if __name__ == '__main__':
-  verify_contract()
+  success = False
+  try:
+    verify_contract()
+    success = True
+  except:
+    pass
+  assert (not success)

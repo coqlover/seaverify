@@ -74,7 +74,7 @@ def test_assigment_2(calculator: Calculator, value: i64):
 @test
 def test_reset(owner2: Signer, calculator: Calculator):
   reset_calculator(owner=owner2, calculator=calculator)
-  assert calculator.display == 0
+  print(calculator.display)
   seaverify_assert(calculator.display == 0)
 
 @test

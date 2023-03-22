@@ -1,70 +1,10 @@
 from seaverify.object import *
-from seaverify.toz3 import create_z3_expr, all_vars, begin_vars, global_counter, lambda_to_z3, add_args_to_solver, object_to_z3
-from seaverify.prelude import solver, all_instructions, reset_solver
+from seaverify.toz3 import create_z3_expr, lambda_to_z3, add_args_to_solver, object_to_z3
+from seaverify.global_vars import solver, all_instructions, all_vars, global_counter
+from seaverify.print import print_solution
 import ast
-import functools
 import inspect
 import z3
-
-# ================
-# Helper functions
-# ================
-
-def print_z3_var(var, model, s="+"):
-  if var is None:
-    return
-  # if var is a z3 ast, print it
-  if isinstance(var, z3.AstRef):
-    value = model[var]
-    if value is not None:
-      print(s, var, ":", value)
-  else:
-    print(s, var.__class__.__name__, ":")
-    # Loop over all attributes of var and print them
-    for k in var.__dict__:
-      try:
-        if not callable(var.__dict__[k]):
-          print_z3_var(var.__dict__[k], model, s+" +")
-      except:
-        pass
-    #print("No relevant value (?) for ", var)
-
-def print_solution(func, simplified=False):
-  if not simplified:
-    print("---------------------------------")
-    print("Constraints:")
-    print(solver.assertions())
-    print("---------------------------------")
-  model = solver.model()
-  if not simplified:
-    print("All variables:")
-    print(model)
-  print("---------------------------------")
-  print("Start state:")
-  for x in begin_vars:
-    print_z3_var(begin_vars[x], model)
-  print("---------------------------------")
-  print("End state:")
-  for x in all_vars:
-    print_z3_var(all_vars[x], model)
-  print("---------------------------------")
-  return
-  print("Values of arguments at the end of the function:")
-  for a in args:
-    # If a is an object, loop over attributes and print them all
-    # todo
-    if isinstance(a, Account):
-      for k in a.__dict__:
-        try:
-          print("Value of", k, ":", solver.model()[a.__dict__[k]])
-        except:
-          print("Can't print attribute of", k)
-    else:
-      try:
-        print("Value of", a, ":", solver.model()[a])
-      except:
-        print("Can't print value of", a)
-  print("---------------------------------")
 
 # ====================
 # Functions decorators
@@ -80,8 +20,8 @@ def assume(lam):
 
 def add_assume(func, lam):
   if not func in list_assume:
-    list_assume[func] = set()
-  list_assume[func].add(lam)
+    list_assume[func] = []
+  list_assume[func].append(lam)
 
 list_enforce = {}
 
@@ -169,9 +109,7 @@ def verify_invariant(lam, invariants):
   print("Verifying invariant:", inspect.getsource(lam), end="")
   invariant_is_correct = True
   for f in all_instructions:
-    #if not "calculator" in f.__name__:
-    #   continue
-    reset_solver()
+    solver.reset()
     # First, transform the argument of the function into z3 variables
     args = create_symbolic_arguments(f)
     add_args_to_solver(f, args)
@@ -210,8 +148,6 @@ def verify_invariant(lam, invariants):
     solver.add(after)
     # Solve, and print
     res = solver.check()
-    print(solver)
-    print(solver.assertions())
     if res == z3.sat:
       invariant_is_correct = False
       print_solution(f)
@@ -238,20 +174,15 @@ def verify_contract():
     verify_invariant(all_invariants[i], all_invariants[:i])
   print("Done verifying the contract")
 
-global every_assert_statement
-every_assert_statement = []
-
 def single_verify_test(f):
-  #print("Verifying test:", inspect.getsource(f), end="")
-  reset_solver()
+  solver.reset()
   # First, transform the argument of the function into z3 variables
   args = create_symbolic_arguments(f)
   add_args_to_solver(f, args)
   # Now we execute the function
-  import seaverify.decorators
-  seaverify.decorators.every_assert_statement = []
+  every_assert_statement = []
   transform_f_to_z3(f)
-  solver.add(z3.Or([z3.Not(x) for x in seaverify.decorators.every_assert_statement]))
+  solver.add(z3.Or([z3.Not(x) for x in every_assert_statement]))
   res = solver.check()
   if res == z3.sat:
     print("❌❌❌❌❌❌")

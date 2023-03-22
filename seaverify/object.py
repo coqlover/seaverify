@@ -1,5 +1,4 @@
-import seahorse
-from seaverify.prelude import solver
+import seahorse.prelude
 import z3
 
 # todo check which one to use

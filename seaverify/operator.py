@@ -1,6 +1,9 @@
+# Takes some op(*args), adds constraints to the solver, and returns
+# eg, a/b adds b!=0 to the solver, and returns the result "a/b"
+
 import ast
 import z3
-from seaverify.prelude import solver
+from seaverify.global_vars import solver
 
 comparaison_operator_bitvec = {
     ast.Lt: z3.ULT,

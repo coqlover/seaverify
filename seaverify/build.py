@@ -1,7 +1,6 @@
 # Usage: python3 build.py
 # Not tested
 
-import sys
 import os
 
 # First, copy the folder "programs_verify" into "programs_py"

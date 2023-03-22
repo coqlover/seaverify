@@ -1,27 +1,14 @@
-from seaverify.prelude import *
+# Translation of ast python object to z3 expression
+# Doc of ast python: https://docs.python.org/3/library/ast.html
+# (Copilot got the doc first try lmao)
+
 from seaverify.object import hardcoded_objects, make_int, HardcodedMapping
-from seaverify.operator import *
+from seaverify.global_vars import all_instructions, all_vars, begin_vars, global_counter, symbolic_objects, current_before_name, current_after_name, solver, every_assert_statement
+from seaverify.operator import operator_to_z3
+import z3
 import ast
-import random
 import inspect
 import textwrap
-
-all_vars = {}
-begin_vars = {}
-current_before_name = None
-current_after_name = None
-
-class GlobalCounter:
-    def __init__(self) -> None:
-        self.counter = {}
-    def create(self, s):
-        if not s in self.counter:
-            self.counter[s] = -1
-        self.counter[s] += 1
-        return s + "?" + str(self.counter[s])
-    def reset(self):
-        self.counter = {}
-global_counter = GlobalCounter()
 
 def lambda_to_z3(lam, init_args, only_after=False):
     # Retrieve the name of the arguments of the lambda
@@ -65,9 +52,7 @@ def create_z3_expr(function):
 
 def stmt_to_z3(node, current_condition=z3.BoolVal(True)):
     # print("stmt_to_z3", node, type(node))
-    # rename expr_to_z3 so that it takes a single argument, but the 2nd one is current_condition
-    # The live below 
-    aux_expr_to_z3 = lambda node: expr_to_z3(node, current_condition)
+    aux_expr_to_z3 = lambda node: expr_to_z3(node, current_condition) # same but propagate current_condition
     if type(node) == list:
         if len(node) == 0:
             return None
@@ -100,12 +85,13 @@ def stmt_to_z3(node, current_condition=z3.BoolVal(True)):
         return aux_expr_to_z3(node.value)
     elif isinstance(node, ast.Assert):
         solver.add(z3.Implies(current_condition, aux_expr_to_z3(node.test)))
+        return None
     else:
         raise Exception("Todo in stmt_to_z3 -> node type: " + str(type(node)))
 
 def expr_to_z3(node, current_condition=z3.BoolVal(True)):
     #print("expr_to_z3", node, type(node))
-    aux_expr_to_z3 = lambda node: expr_to_z3(node, current_condition)
+    aux_expr_to_z3 = lambda node: expr_to_z3(node, current_condition) # same but propagate current_condition
     if isinstance(node, ast.Constant):
         return constant_to_z3(type(node.value), node.value)
     elif isinstance(node, ast.Compare):
@@ -141,7 +127,7 @@ def expr_to_z3(node, current_condition=z3.BoolVal(True)):
                 print("LOG:", [aux_expr_to_z3(n) for n in node.args])
                 return None
             if node.func.id == "min" or node.func.id == "max":
-                assert len(node.args) == 2
+                assert len(node.args) == 2, "We support only when min and max take exactly two arguments"
                 left = aux_expr_to_z3(node.args[0])
                 right = aux_expr_to_z3(node.args[1])
                 if node.func.id == "min":
@@ -150,14 +136,11 @@ def expr_to_z3(node, current_condition=z3.BoolVal(True)):
                     return z3.If(left > right, left, right)
             if node.func.id == "seaverify_assert":
                 assert len(node.args) == 1, "seaverify_assert takes only one argument"
-                assert len(node.keywords) == 0
                 b = aux_expr_to_z3(node.args[0])
-                import seaverify.decorators
-                seaverify.decorators.every_assert_statement.append(z3.Implies(current_condition, b))
+                every_assert_statement.append(z3.Implies(current_condition, b))
                 return None
             if node.func.id == "z3_map_assign":
                 assert len(node.args) == 3
-                assert len(node.keywords) == 0
                 f = get_z3_object(node.args[0])
                 index = aux_expr_to_z3(node.args[1])
                 value = aux_expr_to_z3(node.args[2])
@@ -169,7 +152,6 @@ def expr_to_z3(node, current_condition=z3.BoolVal(True)):
                 return new_f
             if node.func.id == "z3_map_lookup":
                 assert len(node.args) == 2
-                assert len(node.keywords) == 0
                 f = get_z3_object(node.args[0])
                 index = aux_expr_to_z3(node.args[1])
                 answer = z3.Const(global_counter.create(f.name()+"["+str(index)+"]"), f.range())
@@ -177,6 +159,7 @@ def expr_to_z3(node, current_condition=z3.BoolVal(True)):
                 return answer
             # Otherwise, it's a function call
             # Push every arguments in all_vars, execute the function, and clean all_vars
+            # Todo refactor below
             possible_candidates = [f for f in all_instructions if f.__name__ == node.func.id]
             assert len(possible_candidates) > 0, "No function named "+node.func.id+" found"
             assert len(possible_candidates) == 1, "Multiple functions named "+node.func.id+" found"
@@ -205,7 +188,6 @@ def expr_to_z3(node, current_condition=z3.BoolVal(True)):
             for k, v in new_all_vars.items():
                 all_vars[k] = v
             return answer
-            #assert False, "Simple function call are not supported yet except: min/max with 2 arguments, print, and map operations"
         elif isinstance(node.func, ast.Attribute):
             # This is an object calling one of its method with kwargs
             obj = get_z3_object(node.func.value)
@@ -296,7 +278,6 @@ def get_z3_object(node, current_condition=None, new_name=None, new_value=None):
             new_var_sort = returned_value.sort() if returned_value is not None else new_value.sort()
             new_var = z3.Const(global_counter.create(new_name), new_var_sort)
         if chain:
-            # print("setattr", second_to_last_elem, first_elem.attr, new_var)
             setattr(second_to_last_elem, first_elem.attr, new_var)
         else:
             all_vars[name_in_allvars] = new_var
@@ -332,9 +313,7 @@ def object_to_z3(cls, name, is_copy=False):
     # If the class is an Empty[T], transform it into t
     if hasattr(cls, "__args__"):
         cls = cls.__args__[0]
-    # print("Creating symbolic object", cls, name)
     # If the object is something we hardcode by something special, we just return it
-    # eg, i64 becomes bitvec(64), and solanalist becomes list
     if cls in hardcoded_objects:
         return hardcoded_objects[cls](global_counter.create(name))
     # If the class already exists, we just return it - not sure yet todo
