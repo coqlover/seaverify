@@ -151,13 +151,15 @@ def verify_invariant(lam, invariants):
     # Assert the opposite of the invariant we want to prove
     after = z3.Or(after, z3.Not(add_lam_to_solver(lam, end_args, True)))
     every_after.append(lam)
-    solver.add(after)
+    solver.add(z3.simplify(after))
     # Solve, and print
     res = solver.check()
     if res == z3.sat:
       invariant_is_correct = False
       print_solution(f)
       print("Verification of " + f.__name__ + " failed; Here are your properties:")
+      # Todo, unsat core
+      # Todo z3.evaluate to print value of expr
       for every in reversed(every_after):
         solver.push()
         solver.add(add_lam_to_solver(every, end_args, True))
@@ -188,7 +190,7 @@ def single_verify_test(f, is_fail_test=False):
   # Now we execute the function
   every_assert_statement.clear()
   transform_f_to_z3(f)
-  solver.add(z3.Or([z3.Not(x) for x in every_assert_statement]))
+  solver.add(z3.simplify(z3.Or([z3.Not(x) for x in every_assert_statement])))
   res = solver.check()
   # Todo still print a solution when a fail test is correct
   if is_fail_test:
@@ -199,6 +201,7 @@ def single_verify_test(f, is_fail_test=False):
     print_solution(f, True)
     print("❌❌❌❌❌❌")
     return False
+  # todo verif unknown
   return True
 
 def verify_tests():

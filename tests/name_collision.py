@@ -1,3 +1,5 @@
+# Verify we can declare tests with the same function name
+
 import sys
 sys.path.append(".")
 from seaverify.prelude import *

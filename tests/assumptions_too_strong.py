@@ -1,3 +1,5 @@
+# Verify the solver notifies us when assumptions are too strong
+
 import sys
 sys.path.append(".")
 from seaverify.prelude import *

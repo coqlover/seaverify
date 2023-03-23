@@ -83,7 +83,6 @@ def operator_to_z3(op, args):
         if is_bitvec:
             return comparaison_operator_bitvec[type(op)](*args)
         if is_int:
-            comparaison_constraints_int(*args)
             return comparaison_operator_default[type(op)](*args)
         if (type(op) == ast.Eq or type(op) == ast.NotEq) and (is_function or is_python_object):
             if is_function:
@@ -113,6 +112,7 @@ def operator_to_z3(op, args):
             return arithmetic_operator_bitvec[type(op)](a, b)
         if is_int:
             answer = arithmetic_operator_default[type(op)](*args)
+            comparaison_constraints_int(*args)
             arithmetic_constraints_int[type(op)](answer)
             return answer
         assert False, "Not supported yet, arithmetic with non bitvec or int: " + str(args)

@@ -84,7 +84,7 @@ def stmt_to_z3(node, current_condition=z3.BoolVal(True)):
     elif isinstance(node, ast.Expr):
         return aux_expr_to_z3(node.value)
     elif isinstance(node, ast.Assert):
-        solver.add(z3.Implies(current_condition, aux_expr_to_z3(node.test)))
+        solver.add(z3.simplify(z3.Implies(current_condition, aux_expr_to_z3(node.test))))
         return None
     else:
         raise Exception("Todo in stmt_to_z3 -> node type: " + str(type(node)))
@@ -261,9 +261,9 @@ def get_z3_object(node, current_condition=None, new_name=None, new_value=None):
                 new_var = z3.Function(global_counter.create(new_name), z3.StringSort(), z3.IntSort()) # todo generalize
                 idx = z3.Const(global_counter.create("idx"+new_name), z3.StringSort())
                 returned_value = new_var if returned_value is None else returned_value
-                solver.add(z3.If(current_condition,
+                solver.add(z3.simplify(z3.If(current_condition,
                                  z3.ForAll(idx, new_var(idx) == new_value(idx)), 
-                                 z3.ForAll(idx, new_var(idx) == returned_value(idx))))
+                                 z3.ForAll(idx, new_var(idx) == returned_value(idx)))))
             else:
                 assert False, "Assigment of object not supported yet"
                 #new_var = object_to_z3(new_value, new_name, True)
@@ -283,7 +283,7 @@ def get_z3_object(node, current_condition=None, new_name=None, new_value=None):
             all_vars[name_in_allvars] = new_var
         if not is_object:
             returned_value = new_var if returned_value is None else returned_value
-            solver.add(z3.If(current_condition, new_var == new_value, new_var == returned_value))
+            solver.add(z3.simplify(z3.If(current_condition, new_var == new_value, new_var == returned_value)))
     return returned_value
 
 def constant_to_z3(object_type, value=None, name=None):
