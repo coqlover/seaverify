@@ -1,6 +1,3 @@
-# Simplest example
-# Increment a variable by 1 and by any amount
-
 import sys
 sys.path.append(".")
 from seaverify.prelude import *

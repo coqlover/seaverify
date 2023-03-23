@@ -74,7 +74,19 @@ def sqrt_plus_one(n: i64, sqrt_n: i64, sqrt_n_plus_one: i64):
 @enforce(lambda before, after: after.sqrt_n > 1)
 @enforce(lambda before, after: after.sqrt_n_plus_one*after.sqrt_n_plus_one >= after.sqrt_n*after.sqrt_n + 2)
 @enforce(lambda before, after: after.sqrt_n_plus_one*after.sqrt_n_plus_one > after.n+1)
-def sqrt_plus_one_guided(n: i64, sqrt_n: i64, sqrt_n_plus_one: i64, help1: i64, help2: i64):
+def sqrt_plus_one_guided_1(n: i64, sqrt_n: i64, sqrt_n_plus_one: i64, help1: i64, help2: i64):
+  assert sqrt_n*sqrt_n == n
+  assert sqrt_n_plus_one*sqrt_n_plus_one == n+1
+
+# This one works
+#@instruction
+@assume(lambda _: _.n > 1)
+@assume(lambda before: before.sqrt_n_plus_one >= before.sqrt_n + 1)
+@assume(lambda before: before.sqrt_n_plus_one*before.sqrt_n_plus_one >= before.sqrt_n*before.sqrt_n + 2*before.sqrt_n + 1)
+@assume(lambda before: before.sqrt_n > 1)
+@assume(lambda before: before.sqrt_n_plus_one*before.sqrt_n_plus_one >= before.sqrt_n*before.sqrt_n + 2)
+@assume(lambda before: before.sqrt_n_plus_one*before.sqrt_n_plus_one > before.n+1)
+def sqrt_plus_one_guided_2(n: i64, sqrt_n: i64, sqrt_n_plus_one: i64, help1: i64, help2: i64):
   assert sqrt_n*sqrt_n == n
   assert sqrt_n_plus_one*sqrt_n_plus_one == n+1
 
