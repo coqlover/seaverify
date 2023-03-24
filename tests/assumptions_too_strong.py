@@ -1,4 +1,5 @@
 # Verify the solver notifies us when assumptions are too strong
+# Todo, same for @test
 
 import sys
 sys.path.append(".")

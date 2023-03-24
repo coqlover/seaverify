@@ -1,4 +1,4 @@
-# Verify the solver notifies us when assumptions are too strong
+# Properties about an imaginary AMM (a simple one, just x*y==k)
 
 import sys
 sys.path.append(".")
