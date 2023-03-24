@@ -96,11 +96,16 @@ Verification of add_liquidity failed; Here are your properties:
 ✅ lambda before, after: before.lp_token_mint.supply() <= after.lp_token_mint.supply()
 ```
 
+## Installation
+
++ Clone this repository: `git clone github.com/coqlover/seaverify`
++ Install python-z3: `pip3 install z3-solver`
+
 ## Usage
 
-To try it, you probably need Z3, and then clone this repo and execute any file of the folder example: `python3 examples/calculator.py`
+To just try it, run any file of the folder examples. For instance: `python3 examples/calculator.py`
 
-To add seaverify to your project, here are the steps:
+To add seaverify to your project, I haven't tested yet, but here are the steps:
 
 + Clone this repository in your project: `git clone https://github.com/coqlover/seaverify`
 + Replace the seahorse prelude by mine: `from seahorse.prelude import *` by `from seaverify.prelude import *`

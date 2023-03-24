@@ -25,6 +25,7 @@ def run_all_tests():
     for i in range(len(results)):
         answer = results[i].get().returncode
         print("✅" if answer == 0 else "❌", files[i])
+    assert(all([r.get().returncode == 0 for r in results]))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run all tests.')
