@@ -18,7 +18,7 @@ def increment_value(n: u64, value: u64):
 def test_increment_value_1(n: u64, value1: u64, value2: u64):
     old_n = n
     increment_value(n = n, value = value1)
-    seaverify_assert(n == 1)
+    seaverify_assert(n == old_n + value1)
     increment_value(n = n, value = value2)
     seaverify_assert(n == old_n + value1 + value2)
 
