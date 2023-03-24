@@ -291,12 +291,12 @@ def constant_to_z3(object_type, value=None, name=None):
     if object_type == int:
         name = "const_int" if name is None else name
         answer = make_int(global_counter.create(name))
-        solver.add(answer == value)
+        solver.add(answer == value) if value is not None else None
         return answer
     elif object_type == bool:
         name = "const_bool" if name is None else name
         answer = z3.Bool(global_counter.create(name))
-        if value:
+        if value is not None:
             solver.add(answer == value)
         return answer
     elif object_type == type or object_type == str: #todo
