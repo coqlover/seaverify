@@ -36,3 +36,4 @@ jobs:
     - name: Run all tests
       run: |
         python run_test.py
+        python run_all_examples.py
