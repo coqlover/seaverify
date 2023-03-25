@@ -137,8 +137,13 @@ def expr_to_z3(node, current_condition=z3.BoolVal(True)):
             if node.func.id == "seaverify_assert":
                 assert len(node.args) == 1, "seaverify_assert takes only one argument"
                 b = aux_expr_to_z3(node.args[0])
-                every_assert_statement.append(z3.Implies(current_condition, b))
+                every_assert_statement.append(z3.simplify(z3.Implies(current_condition, b)))
                 return None
+            if node.func.id == "seaverify_implies":
+                assert len(node.args) == 2, "seaverify_implies takes two arguments"
+                a = aux_expr_to_z3(node.args[0])
+                b = aux_expr_to_z3(node.args[1])
+                return z3.simplify(z3.Implies(current_condition, z3.Implies(a, b)))
             if node.func.id == "z3_map_assign":
                 assert len(node.args) == 3
                 f = get_z3_object(node.args[0])

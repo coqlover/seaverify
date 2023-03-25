@@ -23,7 +23,7 @@ def execute_swap(a: u64, b: u64, delta_a: u64, delta_b: u64, inverse: bool):
     # Todo refactor current condition to that it's applied everywhere
     # Here the arithmetic constraints inside the if branch are asked no matter current_condition
     product = a * b
-    if not inverse:
+    if inverse == 0:
         a += delta_a
         b -= delta_b
     else:
@@ -40,7 +40,7 @@ def execute_swap(a: u64, b: u64, delta_a: u64, delta_b: u64, inverse: bool):
 def quantity_is_consistent(a: u64, b: u64, delta_a: u64, delta_b: u64):
     start_a = a
     start_b = b
-    execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=False)
+    execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=0)
     seaverify_assert(a >= start_a)
     seaverify_assert(b <= start_b)
 
@@ -48,7 +48,7 @@ def quantity_is_consistent(a: u64, b: u64, delta_a: u64, delta_b: u64):
 def quantity_is_consistent(a: u64, b: u64, delta_a: u64, delta_b: u64):
     start_a = a
     start_b = b
-    execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=True)
+    execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=1)
     seaverify_assert(a >= start_a)
     seaverify_assert(b <= start_b)
 
@@ -59,22 +59,22 @@ def swap(a: u64, b: u64, delta_a: u64, delta_b: u64):
     start_a = a
     start_b = b
     assert a*b > 0
-    execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=False)
+    execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=0)
     seaverify_assert(delta_b == (start_b*delta_a) // (start_a+delta_a))
 
 @test
-def price_goes_up_when_we_make_a_swap(a: u64, b: u64, delta_a: u64, delta_b: u64, inverse: bool):
+def price_goes_up_when_we_make_a_swap(a: u64, b: u64, delta_a: u64, delta_b: u64, inverse: u64):
     start_a = a
     start_b = b
     assert a*b > 0
     execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=inverse)
-    if not inverse:
+    if inverse==0:
         seaverify_assert(get_price(a=a, b=b) >= get_price(a=start_a, b=start_b))
     else:
         seaverify_assert(get_price(a=a, b=b) <= get_price(a=start_a, b=start_b))
 
 @test
-def when_price_went_up_tokena_went_up(a: u64, b: u64, product: u64, delta_a: u64, delta_b: u64, inverse: bool):
+def when_price_went_up_tokena_went_up(a: u64, b: u64, product: u64, delta_a: u64, delta_b: u64, inverse: u64):
     start_a = a
     start_b = b
     assert a*b > 0
@@ -145,20 +145,20 @@ def remove_liquidity(start_a: u64, start_b: u64, delta_a: u64, delta_b: u64):
 def swap_then_inverse(a: u64, b: u64, delta_a: u64, delta_b: u64):
     start_a = a
     start_b = b
-    execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=False)
-    execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=True)
+    execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=0)
+    execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=1)
     seaverify_assert(a == start_a)
     seaverify_assert(b == start_b)
 
 @test
-def price_cant_become_zero(a: u64, b: u64, delta_a: u64, delta_b: u64, inverse: bool):
+def price_cant_become_zero(a: u64, b: u64, delta_a: u64, delta_b: u64, inverse: u64):
     assert get_price(a=a, b=b) > 0
     execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=inverse)
     assert is_round_price(a=a, b=b)
     seaverify_assert(get_price(a=a, b=b) > 0)
 
 @test
-def pool_cant_be_drained(a: u64, b: u64, delta_a: u64, delta_b: u64, inverse: bool):
+def pool_cant_be_drained(a: u64, b: u64, delta_a: u64, delta_b: u64, inverse: u64):
     assert a*b > 0
     execute_swap(a=a, b=b, delta_a=delta_a, delta_b=delta_b, inverse=inverse)
     seaverify_assert(a > 0)

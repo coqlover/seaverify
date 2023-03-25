@@ -1,7 +1,6 @@
 # Todo
 
 + Comment after lambda of decorators
-+ Implies function
 
 ### After learning about solana
 

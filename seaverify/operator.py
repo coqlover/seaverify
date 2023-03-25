@@ -74,9 +74,10 @@ logical_operator_default = {
 def operator_to_z3(op, args):
     is_bitvec = isinstance(args[0], z3.BitVecRef)
     is_int = args[0].sort() == z3.IntSort() if hasattr(args[0], "sort") else False
+    is_bool = args[0].sort() == z3.BoolSort() if hasattr(args[0], "sort") else False
     is_function = isinstance(args[0], z3.FuncDeclRef)
     is_str = args[0].sort() == z3.StringSort() if hasattr(args[0], "sort") else False
-    is_python_object = not is_bitvec and not is_int and not is_function and not is_str
+    is_python_object = not is_bitvec and not is_int and not is_bool and not is_function and not is_str
     # Comparaison
     if type(op) in comparaison_operator_bitvec:
         assert len(args) == 2, "Comparaison with more than 2 args: " + str(args)

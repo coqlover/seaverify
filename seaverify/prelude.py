@@ -17,6 +17,12 @@ def z3_map_lookup(map: HardcodedMapping, key: str):
 def z3_map_assign(map: HardcodedMapping, key: str, value: int):
     """Return a new map with key associated with value"""
 
+def seaverify_assert(value: Any) -> None:
+    """Assert that value is true."""
+
+def seaverify_implies(A: Any, B: Any) -> None:
+    """Create the statement A => B."""
+
 # ==========
 # Rust types
 # ==========
@@ -126,8 +132,6 @@ symbolic_objects.update({
 # Helper functions
 # ================
 
-def seaverify_assert(value: Any) -> None:
-    """Assert that value is true."""
 
 def instruction(function: Callable[..., None]) -> Callable[..., None]:
     """Decorator to turn a function into a program instruction."""

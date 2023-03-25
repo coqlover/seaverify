@@ -14,7 +14,6 @@ class HardcodedMapping:
 
 hardcoded_objects = {
   seahorse.prelude.u64: make_int,
-  bool: lambda name: z3.Bool(name),
   seahorse.prelude.Pubkey: lambda name: z3.String(name),
   HardcodedMapping: lambda name: z3.Function(name, z3.StringSort(), z3.IntSort()), # todo generalize the intsort with above
 }
