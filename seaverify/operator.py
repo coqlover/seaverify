@@ -83,6 +83,7 @@ def operator_to_z3(op, args):
         if is_bitvec:
             return comparaison_operator_bitvec[type(op)](*args)
         if is_int:
+            comparaison_constraints_int(*args)
             return comparaison_operator_default[type(op)](*args)
         if (type(op) == ast.Eq or type(op) == ast.NotEq) and (is_function or is_python_object):
             if is_function:

@@ -2,7 +2,6 @@
 
 + Comment after lambda of decorators
 + Implies function
-+ Create constraints on variable when we create them, not when we got them from an operation
 
 ### After learning about solana
 
