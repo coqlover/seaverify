@@ -122,7 +122,7 @@ To add seaverify to your project, I haven't tested yet, but here are the steps:
 
 ## Non-features
 
-I only support i64 and u64, and everything is considered a u64, so can't be negative.
+This tool only supports u64, so right now values can't be negative.
 
 Same for everything specific to solana, I need to dive deep into anchor and the sealevel to make sure the way my library model the behavior of solana objects is correct.
 

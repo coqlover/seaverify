@@ -8,7 +8,7 @@ declare_id('Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS')
 
 class Calculator(Account):
   owner: Pubkey
-  display: i64
+  display: u64
 
 #@instruction
 @enforce(lambda before, after: after.calculator.owner == before.owner.key())
@@ -27,7 +27,7 @@ def reset_calculator(owner: Signer, calculator: Calculator):
 @instruction
 @enforce(lambda before, after: not(before.op > 3) or (after.calculator.display == before.calculator.display))
 @enforce(lambda before, after: before.op == after.op)
-def do_operation(owner: Signer, calculator: Calculator, op: i64, num: i64):
+def do_operation(owner: Signer, calculator: Calculator, op: u64, num: u64):
   assert owner.key() == calculator.owner, 'This is not your calculator!'
   if op == 0:
     calculator.display += num
@@ -40,7 +40,7 @@ def do_operation(owner: Signer, calculator: Calculator, op: i64, num: i64):
 
 @instruction
 @enforce(lambda before, after: before.calculator.display + before.num == after.calculator.display)
-def add_to_calculator(owner: Signer, calculator: Calculator, num: i64):
+def add_to_calculator(owner: Signer, calculator: Calculator, num: u64):
   assert owner.key() == calculator.owner, 'This is not your calculator!'
   calculator.display += num
 
@@ -55,7 +55,7 @@ def modify_owner(owner: Signer, calculator: Calculator, new_owner: Pubkey):
 #######
 
 @test
-def test_assigment(calculator: Calculator, value: i64):
+def test_assigment(calculator: Calculator, value: u64):
   calculator.display = 1
   calculator.display += value
   seaverify_assert(calculator.display == 1+value)
@@ -63,7 +63,7 @@ def test_assigment(calculator: Calculator, value: i64):
 # Todo split multiple assert statements into multiple tests to make it easier to debug with a counterexample
 # Here for instance, if the middle assert fails, we don't have much info
 @test
-def test_assigment_2(calculator: Calculator, value: i64):
+def test_assigment_2(calculator: Calculator, value: u64):
   calculator.display = 0
   seaverify_assert(calculator.display == 0)
   calculator.display = 1
@@ -85,7 +85,7 @@ def test_modify_owner(owner: Signer, owner2: Signer, calculator: Calculator):
   seaverify_assert(calculator.owner == owner2.key())
 
 @test
-def test_add_to_calculator(owner: Signer, calculator: Calculator, value: i64):
+def test_add_to_calculator(owner: Signer, calculator: Calculator, value: u64):
   old_value = calculator.display
   do_operation(owner=owner, calculator=calculator, op=0, num=value)
   seaverify_assert(calculator.display == old_value + value)

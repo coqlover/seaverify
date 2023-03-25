@@ -26,14 +26,14 @@ def test_simple_transfer_2(alice: Signer, bob: Signer, token: TokenMap):
 @enforce(lambda before, after: after.token.balance(user=before.alice) == before.token.balance(user=before.alice) - before.amount)
 @enforce(lambda before, after: after.token.balance(user=before.bob) == before.token.balance(user=before.bob) + before.amount)
 @assume(lambda _: _.alice.key() != _.bob.key())
-def test_simple_transfer_3(alice: Signer, bob: Signer, token: TokenMap, amount: i64):
+def test_simple_transfer_3(alice: Signer, bob: Signer, token: TokenMap, amount: u64):
   token.transfer(authority=alice, to=bob, amount=amount)
 
 @instruction
 @enforce(lambda before, after: after.token.balance(user=before.alice) == before.token.balance(user=before.alice) - before.amount)
 @enforce(lambda before, after: after.token.balance(user=before.bob) == before.token.balance(user=before.bob) + before.amount)
 @assume(lambda _: _.alice.key() != _.bob.key())
-def test_simple_transfer_4(alice: Signer, bob: Signer, token: TokenMap, amount: i64, amount1: i64, amount2: i64):
+def test_simple_transfer_4(alice: Signer, bob: Signer, token: TokenMap, amount: u64, amount1: u64, amount2: u64):
   assert amount == amount1 + amount2
   token.transfer(authority=alice, to=bob, amount=amount1)
   token.transfer(authority=alice, to=bob, amount=amount2)

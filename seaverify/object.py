@@ -13,7 +13,6 @@ class HardcodedMapping:
   pass
 
 hardcoded_objects = {
-  seahorse.prelude.i64: make_int,
   seahorse.prelude.u64: make_int,
   bool: lambda name: z3.Bool(name),
   seahorse.prelude.Pubkey: lambda name: z3.String(name),

@@ -7,7 +7,7 @@ from seaverify.prelude import *
 declare_id('Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS')
 
 class Object(Account):
-  value: i64
+  value: u64
 
 # Set the value to 10
 @instruction
@@ -32,7 +32,7 @@ def decrease_value_2(object: Object):
 # Increase the value by whatever you want
 @instruction
 @enforce(lambda before, after: after.object.value > before.object.value)
-def add_value(object: Object, value: i64):
+def add_value(object: Object, value: u64):
   assert value > 0, "What you try to do is useless"
   object.value += value
 

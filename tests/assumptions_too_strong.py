@@ -6,7 +6,7 @@ sys.path.append(".")
 from seaverify.prelude import *
 
 @instruction
-def double_assigment(n: i64):
+def double_assigment(n: u64):
   assert n==1
   assert n==2
 

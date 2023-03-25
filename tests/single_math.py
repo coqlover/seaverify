@@ -7,6 +7,6 @@ from seaverify.prelude import *
 def mul(n: u64, m: u64):
     old_n = n
     new_n = n * m
-    seaverify_assert(new_n == old_n * m)
+    seaverify_assert(new_n == old_n * m) # todo try with substitute
 
 assert(all(verify_tests()))
