@@ -11,7 +11,7 @@ class FizzBuzz(Account):
   buzz: bool
   n: u64
 
-@instruction
+#@instruction
 def init(owner: Signer, fizzbuzz: Empty[FizzBuzz]):
   fizzbuzz.init(payer = owner, seeds = ['fizzbuzz', owner])
 

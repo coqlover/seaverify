@@ -1,9 +1,10 @@
 # Override some part of the seahorse prelude to add feature
 # Ideally, can't break anything
 
-from seaverify.global_vars import symbolic_objects, all_instructions
+from seaverify.global_vars import symbolic_objects, all_instructions, solver
 from seahorse.prelude import *
 from seaverify.object import HardcodedMapping
+import z3
 # Function we don't use but expose the end user to (non exhaustive list)
 from seaverify.decorators import assume, invariant, test, fail_test, enforce, add_invariant, verify_contract, verify_tests
 
@@ -119,6 +120,21 @@ class Signer:
 class PubkeyClass:
     def find_program_address(self, a, b):
         return ["ok"]
+
+class Z3List:
+    _list: List[u64]
+    size: u64
+    def __init__(self, list: List[u64], size: u64):
+        self._list = list
+        self.size = size
+    def __getitem__(self, index: u64):
+        solver.add(index >= 0)
+        solver.add(index < self.size)
+        return self._list[index]
+    def __setitem__(self, index: u64, value: u64):
+        solver.add(index >= 0)
+        solver.add(index < self.size)
+        self._list = z3.Store(self._list, index, value)
 
 # Currently not used
 symbolic_objects.update({

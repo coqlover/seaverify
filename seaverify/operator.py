@@ -2,6 +2,7 @@
 # eg, a/b adds b!=0 to the solver, and returns the result "a/b"
 
 from seaverify.global_vars import solver
+import seaverify
 import ast
 import z3
 
@@ -77,7 +78,9 @@ def operator_to_z3(op, args):
     is_bool = args[0].sort() == z3.BoolSort() if hasattr(args[0], "sort") else False
     is_function = isinstance(args[0], z3.FuncDeclRef)
     is_str = args[0].sort() == z3.StringSort() if hasattr(args[0], "sort") else False
-    is_python_object = not is_bitvec and not is_int and not is_bool and not is_function and not is_str
+    from seaverify.prelude import Z3List
+    is_array = type(args[0]) == Z3List or type(args[0]) == list
+    is_python_object = not is_bitvec and not is_int and not is_bool and not is_function and not is_str and not is_array
     # Comparaison
     if type(op) in comparaison_operator_bitvec:
         assert len(args) == 2, "Comparaison with more than 2 args: " + str(args)
@@ -86,15 +89,30 @@ def operator_to_z3(op, args):
         if is_int:
             comparaison_constraints_int(*args)
             return comparaison_operator_default[type(op)](*args)
-        if (type(op) == ast.Eq or type(op) == ast.NotEq) and (is_function or is_python_object):
+        if (type(op) == ast.Eq or type(op) == ast.NotEq) and (is_function or is_array or is_python_object):
             if is_function:
                 idx = z3.Const("idx", z3.StringSort())
                 return z3.ForAll(idx, args[0](idx) == args[1](idx)) if type(op) == ast.Eq else z3.Exists(idx, args[0](idx) != args[1](idx))
+            if is_array:
+                idx = z3.Const("idx", z3.IntSort())
+                cond = z3.simplify(z3.And(idx >= 0, idx < args[0].size, idx < args[1].size))
+                left = seaverify.toz3.list_to_z3(args[0])
+                right = seaverify.toz3.list_to_z3(args[1])
+                #assert args[0].range() == args[1].range(), "Arrays of different types: " + str(args)
+                if type(op) == ast.Eq:
+                    return z3.And(left.size == right.size, z3.ForAll(idx, z3.Implies(cond, left[idx] == right[idx])))
+                if type(op) == ast.NotEq:
+                    return z3.Or(left.size != right.size, z3.Exists(idx, z3.Implies(cond, left[idx] != right[idx])))
+                else:
+                    assert False, "Unreachable"
+                #return z3.ForAll(idx, left[idx] == right[idx]) if type(op) == ast.Eq else z3.Exists(idx, left[idx] != right[idx])
             if is_python_object:
                 # Loop over all the attributes
                 every_eq = []
                 for attr in dir(args[0]):
                     if attr.startswith("__"):
+                        continue
+                    if attr == "_repr_html_":
                         continue
                     if hasattr(args[0], attr):
                         if not hasattr(args[1], attr):

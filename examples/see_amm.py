@@ -25,7 +25,7 @@ def create_pool(
     token_vault_b: Empty[TokenAccount],
     lp_token_mint: Empty[TokenMint],
 ):
-    #bump = pool.bump()
+    bump = pool.bump()
     pool = pool.init(
         payer=authority,
         seeds=["pool", token_mint_a, token_mint_b]
@@ -48,7 +48,7 @@ def create_pool(
         decimals=6,
         authority=pool
     )
-    #pool.bump = bump
+    pool.bump = bump
     pool.authority = authority.key()
     pool.token_mint_a = token_mint_a.key()
     pool.token_mint_b = token_mint_b.key()

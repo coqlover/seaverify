@@ -3,8 +3,9 @@
 # (Copilot got the doc first try lmao)
 
 from seaverify.global_vars import all_instructions, all_vars, begin_vars, global_counter, symbolic_objects, current_before_name, current_after_name, solver, every_assert_statement
-from seaverify.object import hardcoded_objects, make_int, HardcodedMapping
+from seaverify.object import hardcoded_base_objects, make_int, HardcodedMapping
 from seaverify.operator import operator_to_z3
+import seahorse
 import z3
 import ast
 import inspect
@@ -77,9 +78,22 @@ def stmt_to_z3(node, current_condition=z3.BoolVal(True)):
     elif isinstance(node, ast.Assign):
         assert len(node.targets) == 1, "Please split your multiple assigment expr into single assigments expression"
         target = node.targets[0]
-        assert isinstance(target, ast.Name) or isinstance(target, ast.Attribute), "Only single variable assigment is supported for now"
-        target_name = target.id if isinstance(target, ast.Name) else target.attr
-        get_z3_object(target, current_condition, target_name, aux_expr_to_z3(node.value))
+        # Array
+        if isinstance(target, ast.Subscript):
+            target_name = target.value.id
+            target_index = aux_expr_to_z3(target.slice)
+            #new_value = z3.Store(get_z3_object(target.value), target_index, aux_expr_to_z3(node.value))
+            obj = get_z3_object(target.value)
+            obj[target_index] = aux_expr_to_z3(node.value)
+            #new_value = z3.Store(get_z3_object(target.value)._list, target_index, aux_expr_to_z3(node.value))
+            #get_z3_object(target.value, current_condition, target_name, new_value)
+        else:
+            assert isinstance(target, ast.Name) or isinstance(target, ast.Attribute), "Only single variable assigment is supported for now"
+            target_name = target.id if isinstance(target, ast.Name) else target.attr
+            new_value = aux_expr_to_z3(node.value)
+            if type(new_value) == list:
+                new_value = list_to_z3(new_value)
+            get_z3_object(target, current_condition, target_name, new_value)
         return None
     elif isinstance(node, ast.Expr):
         return aux_expr_to_z3(node.value)
@@ -115,12 +129,14 @@ def expr_to_z3(node, current_condition=z3.BoolVal(True)):
     elif isinstance(node, ast.Lambda):
         return aux_expr_to_z3(node.body)
     elif isinstance(node, ast.List):
-        return [aux_expr_to_z3(n) for n in node.elts]
+        all_values = [aux_expr_to_z3(n) for n in node.elts]
+        return all_values
     elif isinstance(node, ast.Subscript):
-        assert isinstance(node.slice, ast.Constant)
         value = aux_expr_to_z3(node.value)
-        index = node.slice.value
-        return value[index]
+        index = node.slice.value if isinstance(node.slice, ast.Constant) else aux_expr_to_z3(node.slice)
+        # todo only aux_expr_to_z3(node.slice)
+        #value.__getitem__(value, index)
+        return value[index] if isinstance(value, list) else value[index]
     elif isinstance(node, ast.Call):
         if isinstance(node.func, ast.Name):
             if node.func.id == "print":
@@ -150,7 +166,7 @@ def expr_to_z3(node, current_condition=z3.BoolVal(True)):
                 index = aux_expr_to_z3(node.args[1])
                 value = aux_expr_to_z3(node.args[2])
                 name = f.name() if f is not None else "map"
-                new_f = hardcoded_objects[HardcodedMapping](global_counter.create(name))
+                new_f = hardcoded_base_objects[HardcodedMapping](global_counter.create(name))
                 idx = z3.Const(global_counter.create("idx_"+name), index.sort())
                 solver.add(z3.ForAll(idx, z3.Implies(idx != index, new_f(idx) == f(idx))))
                 solver.add(new_f(index) == value)
@@ -221,6 +237,28 @@ def expr_to_z3(node, current_condition=z3.BoolVal(True)):
             assert False, "Other function calls not supported yet"
     else:
         raise Exception("Todo in expr_to_z3 -> node type: " + str(type(node)))
+
+# todo generalize to create default value of sort
+# todo forbid negative index
+# todo rewrite
+def list_to_z3(values):
+    if not type(values) == list:
+        return values
+    from seaverify.prelude import Z3List
+    return Z3List(values, len(values))
+    assert len(values) >= 1, "Creation of empty array not yet supported due to lackness of type"
+    array_sort = z3.IntSort() # todo generalize
+    answer = z3.Array(global_counter.create("array"), z3.IntSort(), array_sort)
+    for i, v in enumerate(values):
+        solver.add(z3.Select(answer, i) == v)
+    # Defa
+    idx = z3.Int(global_counter.create("array_index"))
+    default_value = -1
+    if hasattr(values[0], "sort") and values[0].sort() == z3.StringSort():
+        default_value = z3.String(global_counter.create("default_string"))
+    solver.add(z3.simplify(z3.ForAll(idx, z3.Implies(idx >= len(values), z3.Select(answer, idx) == default_value))))
+    solver.add(z3.simplify(z3.ForAll(idx, z3.Implies(idx < 0, z3.Select(answer, idx) == default_value))))
+    return answer
 
 def get_z3_object(node, current_condition=None, new_name=None, new_value=None):
     is_assigment = (current_condition is not None) and (new_name is not None) and (new_value is not None)
@@ -312,20 +350,28 @@ def constant_to_z3(object_type, value=None, name=None):
             return z3.String(global_counter.create(name))
         return object_to_z3(object_type, name)
     raise Exception("Todo in constant_to_z3 -> type&value: " + str(object_type) + " " + str(value))
-    
+
 # From a class, create the exact same class but with symbolic attributes
 def object_to_z3(cls, name, is_copy=False):
-    # If the class is an Empty[T], transform it into t
-    if hasattr(cls, "__args__"):
-        cls = cls.__args__[0]
+    # If the class is a generic type, eg List[T] or Empty[T]
+    if hasattr(cls, "__origin__"):
+        # If the class is an Empty[T], return T
+        if cls.__origin__ == seahorse.prelude.Empty:
+            return object_to_z3(cls.__args__[0], name, is_copy)
+        # List, create a z3 array
+        if cls.__origin__ == list:
+            from seaverify.prelude import Z3List
+            return Z3List(z3.Array(global_counter.create(name), z3.IntSort(),
+                                   #z3.IntSort()), 0)
+                                   object_to_z3(cls.__args__[0], "").sort()), z3.Int(global_counter.create(name + ".length")))
     # If the object is something we hardcode by something special, we just return it
-    if cls in hardcoded_objects:
-        return hardcoded_objects[cls](global_counter.create(name))
+    if cls in hardcoded_base_objects:
+        return hardcoded_base_objects[cls](global_counter.create(name))
     # If the class already exists, we just return it - not sure yet todo
     if hasattr(cls, "__name__") and cls.__name__ in symbolic_objects:
         pass #return symbolic_objects[cls.__name__]
     # Create a new class with the same name
-    new_obj = type("Symbolic " + name, (), {})()
+    new_obj = type("Symbolic " + name, (object,), {})()
     # Transfer each annotation into an attribute
     if hasattr(cls, "__annotations__"):
         for name in cls.__annotations__:
@@ -338,8 +384,10 @@ def object_to_z3(cls, name, is_copy=False):
                 setattr(new_obj, name, None)
     # Transfer each function into a function for the new class
     for name in dir(cls):
-        if name.startswith("__"):
+        if name.startswith("__") and name not in ["__getitem__", "__setitem__", "__str__", "__repr__"]:
             continue
+        #if name in ["__class__", "__dict__", "__doc__", "__module__", "__weakref__"]:
+        #    continue
         attr = getattr(cls, name)
         if callable(attr):
             setattr(new_obj, name, attr)
