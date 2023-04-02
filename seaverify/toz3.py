@@ -64,7 +64,11 @@ def stmt_to_z3(node, current_condition=z3.BoolVal(True)):
         condition = aux_expr_to_z3(node.test)
         body = stmt_to_z3(node.body, z3.And(current_condition, condition))
         orelse = stmt_to_z3(node.orelse, z3.And(current_condition, z3.Not(condition)))
-        return None #z3.If(z3.And(current_condition, condition), body, orelse)
+        if body is None:
+            body = z3.BoolVal(True)
+        if orelse is None:
+            orelse = z3.BoolVal(True)
+        return z3.simplify(z3.If(z3.And(current_condition, condition), body, orelse))
     elif isinstance(node, ast.Return):
         return aux_expr_to_z3(node.value)
     elif isinstance(node, ast.AugAssign):
@@ -84,7 +88,8 @@ def stmt_to_z3(node, current_condition=z3.BoolVal(True)):
             target_index = aux_expr_to_z3(target.slice)
             #new_value = z3.Store(get_z3_object(target.value), target_index, aux_expr_to_z3(node.value))
             obj = get_z3_object(target.value)
-            obj[target_index] = aux_expr_to_z3(node.value)
+            value = aux_expr_to_z3(node.value)
+            obj[target_index] = z3.simplify(z3.If(current_condition, value, obj[target_index]))
             #new_value = z3.Store(get_z3_object(target.value)._list, target_index, aux_expr_to_z3(node.value))
             #get_z3_object(target.value, current_condition, target_name, new_value)
         else:
@@ -332,13 +337,15 @@ def get_z3_object(node, current_condition=None, new_name=None, new_value=None):
 def constant_to_z3(object_type, value=None, name=None):
     #print("constant_to_z3", object_type, value)
     if object_type == int:
-        name = "const_int" if name is None else name
-        answer = make_int(global_counter.create(name))
+        name = "CONST"+str(value) if value is not None else None
+        name = global_counter.create("const_int") if name is None else name
+        answer = make_int(name)
         solver.add(answer == value) if value is not None else None
         return answer
     elif object_type == bool:
-        name = "const_bool" if name is None else name
-        answer = z3.Bool(global_counter.create(name))
+        name = "CONST"+str(value) if value is not None else None
+        name = global_counter.create("const_bool") if name is None else name
+        answer = z3.Bool(name)
         if value is not None:
             solver.add(answer == value)
         return answer

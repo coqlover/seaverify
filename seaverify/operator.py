@@ -6,6 +6,7 @@ import seaverify
 import ast
 import z3
 
+# Todo all these operators are in the wrong order?
 comparaison_operator_bitvec = {
     ast.Lt: z3.ULT,
     ast.LtE: z3.ULE,

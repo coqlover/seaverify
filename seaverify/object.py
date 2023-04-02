@@ -6,7 +6,7 @@ import z3
 # make_int = lambda name: z3.FreshInt(name)
 # make_int = lambda name: z3.BitVec(name, 34)
 # make_int = lambda name: z3.BitVec(name, 35) # timeout - not anymore
-# make_int = lambda name: z3.BitVec(name, 64)
+#make_int = lambda name: z3.BitVec(name, 64)
 make_int = lambda name: z3.Int(name)
 
 class HardcodedMapping:
