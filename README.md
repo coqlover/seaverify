@@ -18,7 +18,7 @@ You can annotate it with some properties. For instance, that n increases.
 
 ```python
 @instruction
-@enforce(lambda before, after: after.n == before.n + 1)
+@enforce(lambda before, after: after.n > before.n)
 def increment(n: u64):
     n += 1
 ```
@@ -31,12 +31,12 @@ def test_increment(n: u64):
     old_n = n
     increment(n = n)
     increment(n = n)
-    seaverify_assert(n, old_n + 2)
+    seaverify_assert(n == old_n + 2)
 ```
 
 Then, seaverify will verify this property for every possible value of n. It cannot miss a testcase (assuming my library doesn't have a bug) like a fuzzer can.
 
-Run the program `hello world.py` to see the result!
+[Run the file `hello_world.py` to see the result!](https://github.com/coqlover/seaverify/blob/main/examples/hello_world.py)
 
 ---
 
@@ -96,6 +96,22 @@ Verification of add_liquidity failed; Here are your properties:
 ✅ lambda before, after: before.lp_token_mint.supply() <= after.lp_token_mint.supply()
 ```
 
+[Check out the file `see_amm.py` for more](https://github.com/coqlover/seaverify/blob/main/examples/see_amm.py)  
+
+---
+
+Even "non-trivial" are easy to write for you and easy to verify for the solver.  
+For instance for a tictactoe game, it's instant to verify the fact that there can only be one winner at the same time.
+
+To do so, we ask the solver to prove that "There is no winner" implies "There can't be 2winners". Here is the property:
+
+```python
+not first_win(moves=before.moves) and not second_win(moves=before.moves)
+=> not (first_win(moves=after.moves) and second_win(moves=after.moves))
+```
+
+And the solver proves that property instantly. [Check out the file tictactoe.py for more](https://github.com/coqlover/seaverify/blob/main/examples/tictactoe.py).  
+
 ## Installation
 
 + Clone this repository: `git clone github.com/coqlover/seaverify`
@@ -115,10 +131,16 @@ To add seaverify to your project, I haven't tested yet, but here are the steps:
 
 ## Features
 
-+ Verification of properties on before/after values of arguments of the functions of your program: `@enforce(lambda before, after: after.n == before.n + 1)` -> here `before.n` is the value of n before the function is called, and `after.n` is the value of n after the function is called. Check the file `examples/calculator.py` for an example.
-+ Assumptions of properties on before values of arguments of the functions of your program: `@assume(lambda before: before.n >= 0)` -> here `before.n` is the value of n before the function is called, and this property is assumed to be true. This is useful if you know it's true, but don't spend compute time to assert it. Check the file `examples/assume.py` for an example.
-+ Verification of invariants on the state of your program: `@invariant(lambda state: state.n >= 0)` -> here `state.n` is the value of n at every function call. It verifies, for every instruction of your program, that if the invariant is true before a function call, it will be true after the function call. I think I misunderstood how programs works in Solana, so this may not be very useful. Check the file `examples/invariant.py` for an example.
-+ Symbolic testing. Create test functions, and insert `seaverify_assert` to assert something. These test functions take any number of argument, and seaverify will guarantee that: for every possible value of every argument, each assertion is true. Check the file `examples/hello world.py` and `examples/calculator.py` for an example. 
++ **Verification of properties about function**.  
+For instance, `@enforce(lambda before, after: after.n == before.n + 1)` will prove that the function increments n. You can also `@assume` something, eg `n>0`, if you know that this function CAN'T be called with `n==0`.  
+Check the file `examples/calculator.py` for an example.
++ **Verification of invariants**.  
+For instance, `@invariant(lambda state: state.n > 0)` will prove that after every `@instruction` call, `n` is always stricly positive. The way to prove that, is to ask the solver to prove, for every function, that if n was stricly positive before the function, then it'll be after.  
+Check the file `examples/invariant.py` for an example.  
+(When I wrote that I think I misunderstood how programs works in Solana, so this may not be very useful). 
++ **Symbolic testing**.  
+Create test functions, the solver will try every possible value and you will be confident your test suite cannot forget an edge case value like a fuzzer can.  
+Check the file `examples/hello world.py` and `examples/calculator.py` for an example. 
 
 ## Non-features
 
