@@ -114,6 +114,13 @@ And the solver proves that property instantly. [Check out the file tictactoe.py 
 
 ## Installation
 
+Want to try without installing?  
+Go to https://github.dev/coqlover/seaverify  
+Open up a terminal (Ctrl+Shift+P, and type "terminal")  
+Choose github codespaces when asked (it's free for like 100H/months for each github account)  
+Then: `pip3 install z3-solver` and finally execute any file: `python3 examples/calculator.py`
+
+Otherwise:
 + Clone this repository: `git clone github.com/coqlover/seaverify`
 + Install python-z3: `pip3 install z3-solver`
 
