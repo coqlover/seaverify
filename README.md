@@ -2,6 +2,8 @@
 
 Seaverify is a tool for verifying properties of SeaHorse programs. It requires the user to specify some properties, and it automatically verifies them with Z3.
 
+Try it on a web-based version of VScode: https://coqlover-verbose-acorn-v4jqx44x55xcxgwp.github.dev
+
 It is a work in progress, and doesn't model correctly the semantic of Solana, so please don't use it in production.
 
 ## Example
